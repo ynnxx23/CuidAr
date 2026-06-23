@@ -1,0 +1,77 @@
+services:
+
+  # BASE DE DATOS POSTGRESQL
+  postgres:
+    image: postgres:16-alpine
+    container_name: cuidar-db
+    restart: unless-stopped
+
+    ports:
+      - "${DB_PORT:-5432}:5432"
+
+    environment:
+      POSTGRES_USER: ${DB_USER:-cuidar}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-cuidar_secret}
+      POSTGRES_DB: ${DB_NAME:-cuidar}
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-cuidar} -d ${DB_NAME:-cuidar}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API BACKEND NODE.JS
+  backend:
+    build:
+      context: ../backend
+      dockerfile: ../docker/Dockerfile.backend
+
+    container_name: cuidar-api
+    restart: unless-stopped
+
+    ports:
+      - "${API_PORT:-3000}:3000"
+
+    environment:
+      NODE_ENV: ${NODE_ENV:-development}
+
+      DATABASE_URL: postgresql://${DB_USER:-cuidar}:${DB_PASSWORD:-cuidar_secret}@postgres:5432/${DB_NAME:-cuidar}
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    volumes:
+      - ../backend/src:/app/src
+
+  # PGADMIN
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: cuidar-pgadmin
+    restart: unless-stopped
+
+    ports:
+      - "5050:80"
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@gmail.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+
+    depends_on:
+      - postgres
+
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+volumes:
+
+  postgres_data:
+
+  pgadmin_data:
+
+  # http://localhost:5050 pgadmin
+  # puerto 3000 backend - api rest
+  # 5432 postgresql 
