@@ -27,13 +27,13 @@ services:
   backend:
     build:
       context: ../backend
-      dockerfile: ../docker/Dockerfile.backend
+      dockerfile: Dockerfile
 
     container_name: cuidar-api
     restart: unless-stopped
 
     ports:
-      - "${API_PORT:-3000}:3000"
+      - "${API_PORT:-3001}:3000"
 
     environment:
       NODE_ENV: ${NODE_ENV:-development}
@@ -45,7 +45,7 @@ services:
         condition: service_healthy
 
     volumes:
-      - ../backend/src:/app/src
+      - ../backend/src:/app/src:ro
 
   # PGADMIN
   pgadmin:
