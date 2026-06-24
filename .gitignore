@@ -31,7 +31,7 @@ build/
 docker/data/
 
 # Prisma
-backend/src/prisma/migrations/
+backend/prisma/migrations/
 
 # Testing
 coverage/

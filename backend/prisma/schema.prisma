@@ -1,0 +1,1099 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Usuario {
+  id                      String                  @id @default(uuid()) @db.Uuid
+  dni                     String                  @unique @db.VarChar(20)
+  correoElectronico                   String                  @unique @db.VarChar(255)
+  hashContrasena            String                  @map("hash_contrasena") @db.VarChar(255)
+  nombre               String                  @map("nombre") @db.VarChar(100)
+  apellido                String                  @map("apellido") @db.VarChar(100)
+  telefono                   String?                 @db.VarChar(30)
+  fechaNacimiento               DateTime?               @map("fecha_nacimiento") @db.Date
+  genero                  String?                 @db.VarChar(30)
+  estado                  EstadoUsuario              @default(pendienteVerificacion)
+  verificadoCorreoEn         DateTime?               @map("verificado_correo_en") @db.Timestamptz(6)
+  verificadoIdentidadEn      DateTime?               @map("verificado_identidad_en") @db.Timestamptz(6)
+  creadoEn               DateTime                @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn               DateTime                @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  eliminadoEn               DateTime?               @map("eliminado_en") @db.Timestamptz(6)
+  archivosSubidos           ArchivoMedico[]           @relation("UploadedBy")
+  archivosValidados          ArchivoMedico[]           @relation("ValidatedBy")
+  medico                  Medico?
+  notificaciones           Notificacion[]
+  paciente                 Paciente?
+  perfilPersonal            PerfilPersonal?
+  preferenciasNotificacion PreferenciaNotificacion?
+  registrosAuditoria               RegistroAuditoria[]
+  registrosConsentimiento          RegistroConsentimiento[]
+  reportes                 Reporte[]
+  sesiones                Sesion[]
+  turnosCreados     Turno[]           @relation("CreatedBy")
+  tutor                Tutor?
+  usuariosRoles               UsuarioRol[]
+  verificacionesIdentidad   VerificacionIdentidad[]
+  identidadVerificada        VerificacionIdentidad[]  @relation("VerifiedByIdentity")
+
+  @@index([correoElectronico])
+  @@index([dni])
+  @@index([estado])
+  @@map("usuarios")
+}
+
+model Rol {
+  id              String           @id @default(uuid()) @db.Uuid
+  codigo            String           @unique @db.VarChar(60)
+  nombre            String           @db.VarChar(100)
+  descripcion     String?
+  creadoEn       DateTime         @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn       DateTime         @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  rolesPermisos RolPermiso[]
+  usuariosRoles       UsuarioRol[]
+
+  @@map("roles")
+}
+
+model Permiso {
+  id              String           @id @default(uuid()) @db.Uuid
+  codigo            String           @unique @db.VarChar(120)
+  nombre            String           @db.VarChar(100)
+  descripcion     String?
+  recurso        String           @db.VarChar(80)
+  accion          String           @db.VarChar(80)
+  creadoEn       DateTime         @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn       DateTime         @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  rolesPermisos RolPermiso[]
+
+  @@map("permisos")
+}
+
+model UsuarioRol {
+  id           String      @id @default(uuid()) @db.Uuid
+  usuarioId       String      @map("user_id") @db.Uuid
+  rolId       String      @map("role_id") @db.Uuid
+  hospitalId   String?     @map("hospital_id") @db.Uuid
+  departamentoId String?     @map("department_id") @db.Uuid
+  creadoEn    DateTime    @default(now()) @map("creado_en") @db.Timestamptz(6)
+  departamento   Departamento? @relation(fields: [departamentoId], references: [id])
+  hospital     Hospital?   @relation(fields: [hospitalId], references: [id])
+  rol         Rol        @relation(fields: [rolId], references: [id])
+  usuario         Usuario        @relation(fields: [usuarioId], references: [id])
+
+  @@unique([usuarioId, rolId, hospitalId, departamentoId])
+  @@map("usuarios_roles")
+}
+
+model RolPermiso {
+  id           String     @id @default(uuid()) @db.Uuid
+  rolId       String     @map("role_id") @db.Uuid
+  permisoId String     @map("permission_id") @db.Uuid
+  creadoEn    DateTime   @default(now()) @map("creado_en") @db.Timestamptz(6)
+  permiso   Permiso @relation(fields: [permisoId], references: [id])
+  rol         Rol       @relation(fields: [rolId], references: [id])
+
+  @@unique([rolId, permisoId])
+  @@map("roles_permisos")
+}
+
+model Sesion {
+  id               String    @id @default(uuid()) @db.Uuid
+  usuarioId           String    @map("user_id") @db.Uuid
+  nombreDispositivo       String?   @map("nombre_dispositivo") @db.VarChar(100)
+  soDispositivo         String?   @map("so_dispositivo") @db.VarChar(50)
+  modeloDispositivo      String?   @map("modelo_dispositivo") @db.VarChar(100)
+  nombreNavegador      String?   @map("nombre_navegador") @db.VarChar(100)
+  direccionIp        String?   @map("direccion_ip") @db.VarChar(45)
+  hashTokenActualizacion String    @map("hash_token_actualizacion") @db.VarChar(255)
+  activo         Boolean   @default(true) @map("activo")
+  ultimaActividadEn   DateTime? @map("ultima_actividad_en") @db.Timestamptz(6)
+  creadoEn        DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  revocadoEn        DateTime? @map("revocado_en") @db.Timestamptz(6)
+  usuario             Usuario      @relation(fields: [usuarioId], references: [id])
+
+  @@index([usuarioId])
+  @@index([activo])
+  @@map("sesiones")
+}
+
+model VerificacionIdentidad {
+  id               String             @id @default(uuid()) @db.Uuid
+  usuarioId           String             @map("user_id") @db.Uuid
+  tipoVerificacion String             @map("tipo_verificacion") @db.VarChar(80)
+  estado           EstadoVerificacion @default(pendiente)
+  datosEnviados    Json?              @map("datos_enviados")
+  verificadoPor       String?            @map("verificado_por") @db.Uuid
+  verificadoEn       DateTime?          @map("verificado_en") @db.Timestamptz(6)
+  notas            String?
+  creadoEn        DateTime           @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn        DateTime           @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  usuario             Usuario               @relation(fields: [usuarioId], references: [id])
+  usuarioVerificador   Usuario?              @relation("VerifiedByIdentity", fields: [verificadoPor], references: [id])
+
+  @@map("verificaciones_identidad")
+}
+
+model RegistroAuditoria {
+  id           String   @id @default(uuid()) @db.Uuid
+  actorUsuarioId  String?  @map("actor_user_id") @db.Uuid
+  accion       String   @db.VarChar(120)
+  tipoRecurso String   @map("resource_type") @db.VarChar(120)
+  recursoId   String?  @map("resource_id") @db.Uuid
+  metadatos     Json?
+  direccionIp    String?  @map("direccion_ip") @db.VarChar(45)
+  agenteUsuario    String?  @map("agente_usuario")
+  creadoEn    DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actor        Usuario?    @relation(fields: [actorUsuarioId], references: [id])
+
+  @@index([actorUsuarioId])
+  @@index([tipoRecurso])
+  @@index([creadoEn])
+  @@map("registros_auditoria")
+}
+
+model Pais {
+  id        String     @id @default(uuid()) @db.Uuid
+  nombre      String     @unique @db.VarChar(100)
+  codigoIso   String?    @unique @map("codigo_iso") @db.VarChar(10)
+  creadoEn DateTime   @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn DateTime   @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  provincias Provincia[]
+
+  @@map("paises")
+}
+
+model Provincia {
+  id         String     @id @default(uuid()) @db.Uuid
+  paisId  String     @map("country_id") @db.Uuid
+  nombre       String     @db.VarChar(100)
+  codigoIso    String?    @map("codigo_iso") @db.VarChar(10)
+  creadoEn  DateTime   @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn  DateTime   @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  hospitales  Hospital[]
+  localidades Localidad[]
+  pais    Pais    @relation(fields: [paisId], references: [id])
+
+  @@unique([paisId, nombre])
+  @@map("provincias")
+}
+
+model Localidad {
+  id            String         @id @default(uuid()) @db.Uuid
+  provinciaId    String         @map("province_id") @db.Uuid
+  nombre          String         @db.VarChar(120)
+  creadoEn     DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn     DateTime       @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  barrios Barrio[]
+  hospitales     Hospital[]
+  provincia      Provincia       @relation(fields: [provinciaId], references: [id])
+
+  @@unique([provinciaId, nombre])
+  @@map("localidades")
+}
+
+model Barrio {
+  id         String     @id @default(uuid()) @db.Uuid
+  localidadId String     @map("locality_id") @db.Uuid
+  nombre       String     @db.VarChar(120)
+  creadoEn  DateTime   @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn  DateTime   @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  localidad   Localidad   @relation(fields: [localidadId], references: [id])
+  hospitales  Hospital[]
+
+  @@unique([localidadId, nombre])
+  @@map("barrios")
+}
+
+model Hospital {
+  id                           String                        @id @default(uuid()) @db.Uuid
+  nombre                         String                        @db.VarChar(200)
+  tipoHospital                 TipoHospital                  @map("tipo_hospital")
+  codigoInterno                 String?                       @unique @map("codigo_interno") @db.VarChar(50)
+  correoElectronico                        String?                       @db.VarChar(255)
+  telefono                        String?                       @db.VarChar(30)
+  direccion                      String?
+  provinciaId                   String                        @map("province_id") @db.Uuid
+  localidadId                   String                        @map("locality_id") @db.Uuid
+  barrioId               String?                       @map("neighborhood_id") @db.Uuid
+  estado                       String                        @default("active") @db.VarChar(30)
+  creadoEn                    DateTime                      @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn                    DateTime                      @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  eliminadoEn                    DateTime?                     @map("eliminado_en") @db.Timestamptz(6)
+  archivosMedicos                 ArchivoMedico[]
+  asignacionesPersonal             AsignacionPersonal[]
+  bloquesHorarios                BloqueHorario[]
+  consultorios              Consultorio[]
+  departamentos                  Departamento[]
+  diagnosticos                    Diagnostico[]
+  especialidadesHospital          EspecialidadHospital[]
+  eventosMedicos                EventoMedico[]
+  excepcionesDisponibilidadMedico ExcepcionDisponibilidadMedico[]
+  historiasClinicas               HistoriaClinica[]
+  localidad                     Localidad                      @relation(fields: [localidadId], references: [id])
+  barrio                 Barrio?                 @relation(fields: [barrioId], references: [id])
+  provincia                     Provincia                      @relation(fields: [provinciaId], references: [id])
+  hospitalesMedico              HospitalMedico[]
+  informesMedicos               InformeMedico[]
+  inscripcionesHospitalPaciente           InscripcionHospitalPaciente[]
+  instantaneasEstadisticas          InstantaneaEstadistica[]
+  notificaciones                Notificacion[]
+  recetas                Receta[]
+  reglasDisponibilidadMedico      ReglaDisponibilidadMedico[]
+  relacionesAtencionPaciente     RelacionAtencionPaciente[]
+  reportes                      Reporte[]
+  sucursales                     SucursalHospital[]
+  tratamientos                   Tratamiento[]
+  turnos                 Turno[]
+  usuariosRoles                    UsuarioRol[]
+
+  @@index([provinciaId])
+  @@index([localidadId])
+  @@map("hospitales")
+}
+
+model SucursalHospital {
+  id         String   @id @default(uuid()) @db.Uuid
+  hospitalId String   @map("hospital_id") @db.Uuid
+  nombre       String   @db.VarChar(200)
+  direccion    String?
+  telefono      String?  @db.VarChar(30)
+  correoElectronico      String?  @db.VarChar(255)
+  estado     String   @default("active") @db.VarChar(30)
+  creadoEn  DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn  DateTime @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+
+  @@map("sucursales_hospital")
+}
+
+model Departamento {
+  id                String                   @id @default(uuid()) @db.Uuid
+  hospitalId        String                   @map("hospital_id") @db.Uuid
+  nombre              String                   @db.VarChar(100)
+  descripcion       String?
+  estado            String                   @default("active") @db.VarChar(30)
+  creadoEn         DateTime                 @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn         DateTime                 @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  asignacionesPersonal  AsignacionPersonal[]
+  bloquesHorarios     BloqueHorario[]
+  consultorios   Consultorio[]
+  hospital          Hospital                 @relation(fields: [hospitalId], references: [id])
+  hospitalesMedico   HospitalMedico[]
+  availabilityRules ReglaDisponibilidadMedico[]
+  usuariosRoles         UsuarioRol[]
+
+  @@unique([hospitalId, nombre])
+  @@map("departamentos")
+}
+
+model Consultorio {
+  id            String         @id @default(uuid()) @db.Uuid
+  hospitalId    String         @map("hospital_id") @db.Uuid
+  departamentoId  String?        @map("department_id") @db.Uuid
+  nombre          String         @db.VarChar(100)
+  codigoConsultorio      String?        @map("codigo_consultorio") @db.VarChar(30)
+  estado        String         @default("active") @db.VarChar(30)
+  creadoEn     DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn     DateTime       @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  bloquesHorarios BloqueHorario[]
+  departamento    Departamento?    @relation(fields: [departamentoId], references: [id])
+  hospital      Hospital       @relation(fields: [hospitalId], references: [id])
+  turnos  Turno[]
+
+  @@map("consultorios")
+}
+
+model Especialidad {
+  id                  String              @id @default(uuid()) @db.Uuid
+  nombre                String              @unique @db.VarChar(100)
+  descripcion         String?
+  creadoEn           DateTime            @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn           DateTime            @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  bloquesHorarios       BloqueHorario[]
+  especialidadesHospital EspecialidadHospital[]
+  especialidadesMedico   EspecialidadMedico[]
+  turnos        Turno[]
+
+  @@map("especialidades")
+}
+
+model EspecialidadHospital {
+  id           String    @id @default(uuid()) @db.Uuid
+  hospitalId   String    @map("hospital_id") @db.Uuid
+  especialidadId  String    @map("specialty_id") @db.Uuid
+  departamentoId String?   @map("department_id") @db.Uuid
+  activo     Boolean   @default(true) @map("activo")
+  creadoEn    DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  hospital     Hospital  @relation(fields: [hospitalId], references: [id])
+  especialidad    Especialidad @relation(fields: [especialidadId], references: [id])
+
+  @@unique([hospitalId, especialidadId])
+  @@map("especialidades_hospital")
+}
+
+model Paciente {
+  id                    String                      @id @default(uuid()) @db.Uuid
+  usuarioId                String                      @unique @map("user_id") @db.Uuid
+  tipoSangre             String?                     @map("tipo_sangre") @db.VarChar(10)
+  alergias             String?
+  condicionesCronicas     String?                     @map("condiciones_cronicas")
+  medicacionActual     String?                     @map("medicacion_actual")
+  contactoEmergenciaNombre  String?                     @map("contacto_emergencia_nombre") @db.VarChar(100)
+  contactoEmergenciaTelefono String?                     @map("contacto_emergencia_telefono") @db.VarChar(30)
+  notasMedicas          String?                     @map("notas_medicas")
+  creadoEn             DateTime                    @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn             DateTime                    @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  archivosMedicos          ArchivoMedico[]
+  diagnosticos             Diagnostico[]
+  eventosMedicos         EventoMedico[]
+  historiaClinica         HistoriaClinica?
+  informesMedicos        InformeMedico[]
+  inscripcionesHospital   InscripcionHospitalPaciente[]
+  usuario                  Usuario                        @relation(fields: [usuarioId], references: [id])
+  pacientesTutores      PacienteTutor[]
+  recetas         Receta[]
+  relacionesAtencionPaciente     RelacionAtencionPaciente[]
+  tratamientos            Tratamiento[]
+  turnos          Turno[]
+
+  @@map("pacientes")
+}
+
+model Tutor {
+  id                String            @id @default(uuid()) @db.Uuid
+  usuarioId            String            @unique @map("user_id") @db.Uuid
+  notasRelacion String?           @map("notas_relacion")
+  creadoEn         DateTime          @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn         DateTime          @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  pacientesTutores  PacienteTutor[]
+  usuario              Usuario              @relation(fields: [usuarioId], references: [id])
+
+  @@map("tutores")
+}
+
+model PacienteTutor {
+  id                  String             @id @default(uuid()) @db.Uuid
+  pacienteId           String             @map("patient_id") @db.Uuid
+  tutorUsuarioId      String             @map("guardian_user_id") @db.Uuid
+  tipoRelacion    String             @map("tipo_relacion") @db.VarChar(80)
+  estadoAutorizacion EstadoVerificacion @default(pendiente) @map("estado_autorizacion")
+  creadoEn           DateTime           @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn           DateTime           @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  tutor            Tutor           @relation(fields: [tutorUsuarioId], references: [usuarioId])
+  paciente             Paciente            @relation(fields: [pacienteId], references: [id])
+
+  @@unique([pacienteId, tutorUsuarioId])
+  @@map("pacientes_tutores")
+}
+
+model InscripcionHospitalPaciente {
+  id         String   @id @default(uuid()) @db.Uuid
+  pacienteId  String   @map("patient_id") @db.Uuid
+  hospitalId String   @map("hospital_id") @db.Uuid
+  estado     String   @default("active") @db.VarChar(30)
+  creadoEn  DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn  DateTime @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  hospital   Hospital @relation(fields: [hospitalId], references: [id])
+  paciente    Paciente  @relation(fields: [pacienteId], references: [id])
+
+  @@unique([pacienteId, hospitalId])
+  @@map("inscripciones_hospital_paciente")
+}
+
+model RelacionAtencionPaciente {
+  id               String   @id @default(uuid()) @db.Uuid
+  pacienteId        String   @map("patient_id") @db.Uuid
+  medicoId         String   @map("doctor_id") @db.Uuid
+  hospitalId       String   @map("hospital_id") @db.Uuid
+  tipoRelacion String   @map("tipo_relacion") @db.VarChar(80)
+  principal        Boolean  @default(false) @map("principal")
+  creadoEn        DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn        DateTime @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  medico           Medico   @relation(fields: [medicoId], references: [id])
+  hospital         Hospital @relation(fields: [hospitalId], references: [id])
+  paciente          Paciente  @relation(fields: [pacienteId], references: [id])
+
+  @@unique([pacienteId, medicoId, hospitalId])
+  @@map("relaciones_atencion_paciente")
+}
+
+model PerfilPersonal {
+  id          String            @id @default(uuid()) @db.Uuid
+  usuarioId      String            @unique @map("user_id") @db.Uuid
+  tipoPersonal   String            @map("tipo_personal") @db.VarChar(80)
+  notas       String?
+  creadoEn   DateTime          @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn   DateTime          @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  asignaciones AsignacionPersonal[]
+  usuario        Usuario              @relation(fields: [usuarioId], references: [id])
+
+  @@map("perfiles_personal")
+}
+
+model AsignacionPersonal {
+  id             String       @id @default(uuid()) @db.Uuid
+  perfilPersonalId String       @map("staff_profile_id") @db.Uuid
+  hospitalId     String       @map("hospital_id") @db.Uuid
+  departamentoId   String?      @map("department_id") @db.Uuid
+  etiquetaRol      String       @map("etiqueta_rol") @db.VarChar(100)
+  activo       Boolean      @default(true) @map("activo")
+  creadoEn      DateTime     @default(now()) @map("creado_en") @db.Timestamptz(6)
+  departamento     Departamento?  @relation(fields: [departamentoId], references: [id])
+  hospital       Hospital     @relation(fields: [hospitalId], references: [id])
+  perfilPersonal   PerfilPersonal @relation(fields: [perfilPersonalId], references: [id])
+
+  @@map("asignaciones_personal")
+}
+
+model Medico {
+  id                     String                        @id @default(uuid()) @db.Uuid
+  usuarioId                 String                        @unique @map("user_id") @db.Uuid
+  numeroMatricula   String                        @unique @map("numero_matricula") @db.VarChar(100)
+  biografia                    String?
+  estadoLaboral              EstadoLaboralMedico               @default(disponible) @map("estado_laboral")
+  notas                  String?
+  creadoEn              DateTime                      @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn              DateTime                      @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  bloquesHorarios          BloqueHorario[]
+  diagnosticos              Diagnostico[]
+  especialidades            EspecialidadMedico[]
+  eventosMedicos          EventoMedico[]
+  availabilityExceptions ExcepcionDisponibilidadMedico[]
+  historiasClinicas         HistoriaClinica[]               @relation("PrimaryDoctor")
+  hospitales              HospitalMedico[]
+  informesMedicos         InformeMedico[]
+  usuario                   Usuario                          @relation(fields: [usuarioId], references: [id])
+  notificaciones          Notificacion[]
+  recetas          Receta[]
+  availabilityRules      ReglaDisponibilidadMedico[]
+  relacionesAtencionPaciente      RelacionAtencionPaciente[]
+  tratamientos             Tratamiento[]
+  turnos           Turno[]
+
+  @@map("medicos")
+}
+
+model EspecialidadMedico {
+  id          String    @id @default(uuid()) @db.Uuid
+  medicoId    String    @map("doctor_id") @db.Uuid
+  especialidadId String    @map("specialty_id") @db.Uuid
+  principal   Boolean   @default(false) @map("principal")
+  creadoEn   DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  medico      Medico    @relation(fields: [medicoId], references: [id])
+  especialidad   Especialidad @relation(fields: [especialidadId], references: [id])
+
+  @@unique([medicoId, especialidadId])
+  @@map("especialidades_medico")
+}
+
+model HospitalMedico {
+  id           String      @id @default(uuid()) @db.Uuid
+  medicoId     String      @map("doctor_id") @db.Uuid
+  hospitalId   String      @map("hospital_id") @db.Uuid
+  departamentoId String?     @map("department_id") @db.Uuid
+  activo     Boolean     @default(true) @map("activo")
+  creadoEn    DateTime    @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn    DateTime    @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  departamento   Departamento? @relation(fields: [departamentoId], references: [id])
+  medico       Medico      @relation(fields: [medicoId], references: [id])
+  hospital     Hospital    @relation(fields: [hospitalId], references: [id])
+
+  @@unique([medicoId, hospitalId, departamentoId])
+  @@map("hospitales_medico")
+}
+
+model ReglaDisponibilidadMedico {
+  id                  String         @id @default(uuid()) @db.Uuid
+  medicoId            String         @map("doctor_id") @db.Uuid
+  hospitalId          String         @map("hospital_id") @db.Uuid
+  departamentoId        String?        @map("department_id") @db.Uuid
+  diaSemana           Int            @map("dia_semana")
+  horaInicio           DateTime       @map("hora_inicio") @db.Time(6)
+  horaFin             DateTime       @map("hora_fin") @db.Time(6)
+  duracionBloqueMinutos Int            @map("duracion_bloque_minutos")
+  minutosDescanso        Int            @default(0) @map("minutos_descanso")
+  activo            Boolean        @default(true) @map("activo")
+  creadoEn           DateTime       @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn           DateTime       @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  bloques               BloqueHorario[]
+  departamento          Departamento?    @relation(fields: [departamentoId], references: [id])
+  medico              Medico         @relation(fields: [medicoId], references: [id])
+  hospital            Hospital       @relation(fields: [hospitalId], references: [id])
+
+  @@map("reglas_disponibilidad_medico")
+}
+
+model ExcepcionDisponibilidadMedico {
+  id            String    @id @default(uuid()) @db.Uuid
+  medicoId      String    @map("doctor_id") @db.Uuid
+  hospitalId    String    @map("hospital_id") @db.Uuid
+  fecha          DateTime  @db.Date
+  tipoExcepcion String    @map("tipo_excepcion") @db.VarChar(80)
+  horaInicio     DateTime? @map("hora_inicio") @db.Time(6)
+  horaFin       DateTime? @map("hora_fin") @db.Time(6)
+  mensaje       String?
+  creadoEn     DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  medico        Medico    @relation(fields: [medicoId], references: [id])
+  hospital      Hospital  @relation(fields: [hospitalId], references: [id])
+
+  @@map("excepciones_disponibilidad_medico")
+}
+
+model BloqueHorario {
+  id                 String                  @id @default(uuid()) @db.Uuid
+  medicoId           String                  @map("doctor_id") @db.Uuid
+  hospitalId         String                  @map("hospital_id") @db.Uuid
+  departamentoId       String?                 @map("department_id") @db.Uuid
+  especialidadId        String                  @map("specialty_id") @db.Uuid
+  consultorioId   String?                 @map("consultorio_id") @db.Uuid
+  reglaDisponibilidadId String?                 @map("regla_disponibilidad_id") @db.Uuid
+  fechaBloque           DateTime                @map("fecha_bloque") @db.Date
+  horaInicio          DateTime                @map("hora_inicio") @db.Time(6)
+  horaFin            DateTime                @map("hora_fin") @db.Time(6)
+  estado             EstadoTurno       @default(disponible)
+  creadoEn          DateTime                @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn          DateTime                @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  consultorio     Consultorio?         @relation(fields: [consultorioId], references: [id])
+  departamento         Departamento?             @relation(fields: [departamentoId], references: [id])
+  medico             Medico                  @relation(fields: [medicoId], references: [id])
+  hospital           Hospital                @relation(fields: [hospitalId], references: [id])
+  availabilityRule   ReglaDisponibilidadMedico? @relation(fields: [reglaDisponibilidadId], references: [id])
+  especialidad          Especialidad               @relation(fields: [especialidadId], references: [id])
+  turno        Turno?
+
+  @@unique([medicoId, fechaBloque, horaInicio, hospitalId])
+  @@map("bloques_horarios")
+}
+
+model Turno {
+  id                 String                     @id @default(uuid()) @db.Uuid
+  bloqueId             String                     @unique @map("slot_id") @db.Uuid
+  hospitalId         String                     @map("hospital_id") @db.Uuid
+  medicoId           String                     @map("doctor_id") @db.Uuid
+  pacienteId          String?                    @map("patient_id") @db.Uuid
+  especialidadId        String                     @map("specialty_id") @db.Uuid
+  consultorioId   String?                    @map("consultorio_id") @db.Uuid
+  creadoPorUsuarioId    String                     @map("creado_por_usuario_id") @db.Uuid
+  fechaTurno    DateTime                   @map("fecha_turno") @db.Date
+  horaInicio          DateTime                   @map("hora_inicio") @db.Time(6)
+  horaFin            DateTime                   @map("hora_fin") @db.Time(6)
+  modo               ModoTurno
+  estado             EstadoTurno          @default(reservado)
+  motivo             String?
+  notas              String?
+  confirmacionEnviadaEn DateTime?                  @map("confirmacion_enviada_en") @db.Timestamptz(6)
+  confirmadoEn        DateTime?                  @map("confirmado_en") @db.Timestamptz(6)
+  canceladoEn        DateTime?                  @map("cancelado_en") @db.Timestamptz(6)
+  creadoEn          DateTime                   @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn          DateTime                   @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  documentos          DocumentoTurno[]
+  eventosMedicos      EventoMedico[]
+  statusHistory      HistorialEstadoTurno[]
+  notificaciones      Notificacion[]
+  consultorio     Consultorio?            @relation(fields: [consultorioId], references: [id])
+  creadoPor          Usuario                       @relation("CreatedBy", fields: [creadoPorUsuarioId], references: [id])
+  medico             Medico                     @relation(fields: [medicoId], references: [id])
+  hospital           Hospital                   @relation(fields: [hospitalId], references: [id])
+  paciente            Paciente?                   @relation(fields: [pacienteId], references: [id])
+  slot               BloqueHorario               @relation(fields: [bloqueId], references: [id])
+  especialidad          Especialidad                  @relation(fields: [especialidadId], references: [id])
+
+  @@map("turnos")
+}
+
+model HistorialEstadoTurno {
+  id              String      @id @default(uuid()) @db.Uuid
+  turnoId   String      @map("appointment_id") @db.Uuid
+  estadoAnterior       String?     @map("estado_anterior") @db.VarChar(30)
+  estadoNuevo       String      @map("estado_nuevo") @db.VarChar(30)
+  cambiadoPorUsuarioId String?     @map("cambiado_por_usuario_id") @db.Uuid
+  motivo          String?
+  creadoEn       DateTime    @default(now()) @map("creado_en") @db.Timestamptz(6)
+  turno     Turno @relation(fields: [turnoId], references: [id])
+
+  @@map("historial_estados_turno")
+}
+
+model DocumentoTurno {
+  id            String      @id @default(uuid()) @db.Uuid
+  turnoId String      @map("appointment_id") @db.Uuid
+  archivoId        String      @map("archivo_id") @db.Uuid
+  tipoDocumento  String      @map("tipo_documento") @db.VarChar(80)
+  creadoEn     DateTime    @default(now()) @map("creado_en") @db.Timestamptz(6)
+  turno   Turno @relation(fields: [turnoId], references: [id])
+  archivo          ArchivoMedico @relation(fields: [archivoId], references: [id])
+
+  @@map("documentos_turno")
+}
+
+model ListaEsperaTurno {
+  id            String    @id @default(uuid()) @db.Uuid
+  hospitalId    String    @map("hospital_id") @db.Uuid
+  medicoId      String    @map("doctor_id") @db.Uuid
+  pacienteId     String    @map("patient_id") @db.Uuid
+  especialidadId   String    @map("specialty_id") @db.Uuid
+  fechaPreferida DateTime? @map("fecha_preferida") @db.Date
+  estado        String    @default("waiting") @db.VarChar(30)
+  creadoEn     DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+
+  @@index([hospitalId])
+  @@index([medicoId])
+  @@index([pacienteId])
+  @@map("lista_espera_turnos")
+}
+
+model HistoriaClinica {
+  id              String          @id @default(uuid()) @db.Uuid
+  pacienteId       String          @unique @map("patient_id") @db.Uuid
+  medicoPrincipalId String?         @map("medico_principal_id") @db.Uuid
+  hospitalId      String?         @map("hospital_id") @db.Uuid
+  resumen         String?
+  creadoEn       DateTime        @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn       DateTime        @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  archivosMedicos    ArchivoMedico[]
+  diagnosticos       Diagnostico[]
+  eventosMedicos   EventoMedico[]
+  hospital        Hospital?       @relation(fields: [hospitalId], references: [id])
+  primaryDoctor   Medico?         @relation("PrimaryDoctor", fields: [medicoPrincipalId], references: [id])
+  paciente         Paciente         @relation(fields: [pacienteId], references: [id])
+  informesMedicos  InformeMedico[]
+  recetas   Receta[]
+  tratamientos      Tratamiento[]
+
+  @@map("historias_clinicas")
+}
+
+model EventoMedico {
+  id              String                @id @default(uuid()) @db.Uuid
+  historiaClinicaId String                @map("medical_record_id") @db.Uuid
+  pacienteId       String                @map("patient_id") @db.Uuid
+  medicoId        String?               @map("doctor_id") @db.Uuid
+  hospitalId      String?               @map("hospital_id") @db.Uuid
+  turnoId   String?               @map("appointment_id") @db.Uuid
+  tipoEvento       String                @map("tipo_evento") @db.VarChar(80)
+  titulo           String                @map("titulo") @db.VarChar(200)
+  descripcion     String?
+  fechaEvento       DateTime              @map("fecha_evento") @db.Timestamptz(6)
+  creadoPorUsuarioId String                @map("creado_por_usuario_id") @db.Uuid
+  creadoEn       DateTime              @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn       DateTime              @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  archivosMedicos    ArchivoMedico[]
+  diagnosticos       Diagnostico[]
+  turno     Turno?          @relation(fields: [turnoId], references: [id])
+  medico          Medico?               @relation(fields: [medicoId], references: [id])
+  hospital        Hospital?             @relation(fields: [hospitalId], references: [id])
+  historiaClinica   HistoriaClinica         @relation(fields: [historiaClinicaId], references: [id])
+  paciente         Paciente               @relation(fields: [pacienteId], references: [id])
+  informesMedicos  InformeMedico[]
+  observaciones    ObservacionClinica[]
+  recetas   Receta[]
+  signosVitales      SignoVital[]
+  tratamientos      Tratamiento[]
+
+  @@map("eventos_medicos")
+}
+
+model Diagnostico {
+  id              String        @id @default(uuid()) @db.Uuid
+  eventoMedicoId  String?       @map("medical_event_id") @db.Uuid
+  historiaClinicaId String        @map("medical_record_id") @db.Uuid
+  pacienteId       String        @map("patient_id") @db.Uuid
+  medicoId        String        @map("doctor_id") @db.Uuid
+  hospitalId      String        @map("hospital_id") @db.Uuid
+  codigoDiagnostico   String?       @map("codigo_diagnostico") @db.VarChar(50)
+  descripcion     String?
+  tipoDiagnostico   String        @default("presumptive") @map("tipo_diagnostico") @db.VarChar(50)
+  creadoEn       DateTime      @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn       DateTime      @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  medico          Medico        @relation(fields: [medicoId], references: [id])
+  hospital        Hospital      @relation(fields: [hospitalId], references: [id])
+  eventoMedico    EventoMedico? @relation(fields: [eventoMedicoId], references: [id])
+  historiaClinica   HistoriaClinica @relation(fields: [historiaClinicaId], references: [id])
+  paciente         Paciente       @relation(fields: [pacienteId], references: [id])
+
+  @@map("diagnosticos")
+}
+
+model Tratamiento {
+  id              String        @id @default(uuid()) @db.Uuid
+  eventoMedicoId  String?       @map("medical_event_id") @db.Uuid
+  historiaClinicaId String        @map("medical_record_id") @db.Uuid
+  pacienteId       String        @map("patient_id") @db.Uuid
+  medicoId        String        @map("doctor_id") @db.Uuid
+  hospitalId      String        @map("hospital_id") @db.Uuid
+  descripcion     String?
+  fechaInicio       DateTime?     @map("fecha_inicio") @db.Date
+  fechaFin         DateTime?     @map("fecha_fin") @db.Date
+  estado          String        @default("active") @db.VarChar(30)
+  creadoEn       DateTime      @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn       DateTime      @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  medico          Medico        @relation(fields: [medicoId], references: [id])
+  hospital        Hospital      @relation(fields: [hospitalId], references: [id])
+  eventoMedico    EventoMedico? @relation(fields: [eventoMedicoId], references: [id])
+  historiaClinica   HistoriaClinica @relation(fields: [historiaClinicaId], references: [id])
+  paciente         Paciente       @relation(fields: [pacienteId], references: [id])
+
+  @@map("tratamientos")
+}
+
+model ObservacionClinica {
+  id              String        @id @default(uuid()) @db.Uuid
+  eventoMedicoId  String?       @map("medical_event_id") @db.Uuid
+  historiaClinicaId String        @map("medical_record_id") @db.Uuid
+  pacienteId       String        @map("patient_id") @db.Uuid
+  medicoId        String?       @map("doctor_id") @db.Uuid
+  perfilPersonalId  String?       @map("staff_profile_id") @db.Uuid
+  hospitalId      String        @map("hospital_id") @db.Uuid
+  descripcion     String?
+  creadoEn       DateTime      @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn       DateTime      @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  eventoMedico    EventoMedico? @relation(fields: [eventoMedicoId], references: [id])
+
+  @@map("observaciones_clinicas")
+}
+
+model SignoVital {
+  id               String        @id @default(uuid()) @db.Uuid
+  eventoMedicoId   String?       @map("medical_event_id") @db.Uuid
+  historiaClinicaId  String        @map("medical_record_id") @db.Uuid
+  pacienteId        String        @map("patient_id") @db.Uuid
+  perfilPersonalId   String?       @map("staff_profile_id") @db.Uuid
+  medicoId         String?       @map("doctor_id") @db.Uuid
+  hospitalId       String        @map("hospital_id") @db.Uuid
+  presionArterial    String?       @map("presion_arterial") @db.VarChar(20)
+  frecuenciaCardiaca        Int?          @map("frecuencia_cardiaca")
+  temperatura      Decimal?      @db.Decimal(4, 1)
+  saturacionOxigeno Decimal?      @map("saturacion_oxigeno") @db.Decimal(5, 2)
+  peso           Decimal?      @db.Decimal(6, 2)
+  altura           Decimal?      @db.Decimal(6, 2)
+  notas            String?
+  creadoEn        DateTime      @default(now()) @map("creado_en") @db.Timestamptz(6)
+  eventoMedico     EventoMedico? @relation(fields: [eventoMedicoId], references: [id])
+
+  @@map("signos_vitales")
+}
+
+model ArchivoMedico {
+  id                   String                @id @default(uuid()) @db.Uuid
+  pacienteId            String                @map("patient_id") @db.Uuid
+  historiaClinicaId      String?               @map("medical_record_id") @db.Uuid
+  hospitalId           String?               @map("hospital_id") @db.Uuid
+  eventoMedicoId       String?               @map("medical_event_id") @db.Uuid
+  subidoPorUsuarioId     String                @map("subido_por_usuario_id") @db.Uuid
+  tipoArchivo             TipoArchivo              @map("file_type")
+  titulo                String?               @db.VarChar(200)
+  descripcion          String?
+  urlArchivo              String                @map("url_archivo")
+  proveedorAlmacenamiento      String                @default("firebase") @map("proveedor_almacenamiento") @db.VarChar(50)
+  tipoOrigen           TipoOrigen            @map("source_type")
+  validado          Boolean               @default(false) @map("validado")
+  validadoPorUsuarioId    String?               @map("validado_por_usuario_id") @db.Uuid
+  validadoEn          DateTime?             @map("validado_en") @db.Timestamptz(6)
+  creadoEn            DateTime              @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn            DateTime              @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  hospital             Hospital?             @relation(fields: [hospitalId], references: [id])
+  eventoMedico         EventoMedico?         @relation(fields: [eventoMedicoId], references: [id])
+  historiaClinica        HistoriaClinica?        @relation(fields: [historiaClinicaId], references: [id])
+  paciente              Paciente               @relation(fields: [pacienteId], references: [id])
+  subidoPor           Usuario                  @relation("UploadedBy", fields: [subidoPorUsuarioId], references: [id])
+  validadoPor          Usuario?                 @relation("ValidatedBy", fields: [validadoPorUsuarioId], references: [id])
+  documentosTurno DocumentoTurno[]
+  etiquetas                 EtiquetaArchivoMedico[]
+  informesMedicos       InformeMedico[]
+
+  @@index([pacienteId])
+  @@index([tipoArchivo])
+  @@index([hospitalId])
+  @@map("archivos_medicos")
+}
+
+model EtiquetaArchivo {
+  id           String           @id @default(uuid()) @db.Uuid
+  nombre         String           @unique @db.VarChar(60)
+  creadoEn    DateTime         @default(now()) @map("creado_en") @db.Timestamptz(6)
+  archivosMedicos EtiquetaArchivoMedico[]
+
+  @@map("etiquetas_archivos")
+}
+
+model EtiquetaArchivoMedico {
+  id            String      @id @default(uuid()) @db.Uuid
+  archivoMedicoId String      @map("medical_file_id") @db.Uuid
+  etiquetaArchivoId     String      @map("file_tag_id") @db.Uuid
+  etiquetaArchivo       EtiquetaArchivo     @relation(fields: [etiquetaArchivoId], references: [id])
+  archivoMedico   ArchivoMedico @relation(fields: [archivoMedicoId], references: [id])
+
+  @@unique([archivoMedicoId, etiquetaArchivoId])
+  @@map("etiquetas_archivo_medico")
+}
+
+model Receta {
+  id              String             @id @default(uuid()) @db.Uuid
+  eventoMedicoId  String?            @map("medical_event_id") @db.Uuid
+  historiaClinicaId String             @map("medical_record_id") @db.Uuid
+  pacienteId       String             @map("patient_id") @db.Uuid
+  medicoId        String             @map("doctor_id") @db.Uuid
+  hospitalId      String             @map("hospital_id") @db.Uuid
+  emitidoPorUsuarioId  String             @map("issued_by_user_id") @db.Uuid
+  resumen         String?
+  estado          String             @default("active") @db.VarChar(30)
+  creadoEn       DateTime           @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn       DateTime           @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  items           ItemReceta[]
+  medico          Medico             @relation(fields: [medicoId], references: [id])
+  hospital        Hospital           @relation(fields: [hospitalId], references: [id])
+  eventoMedico    EventoMedico?      @relation(fields: [eventoMedicoId], references: [id])
+  historiaClinica   HistoriaClinica      @relation(fields: [historiaClinicaId], references: [id])
+  paciente         Paciente            @relation(fields: [pacienteId], references: [id])
+
+  @@map("recetas")
+}
+
+model ItemReceta {
+  id             String       @id @default(uuid()) @db.Uuid
+  recetaId String       @map("prescription_id") @db.Uuid
+  nombreMedicamento String       @map("nombre_medicamento") @db.VarChar(200)
+  dosis           String?      @db.VarChar(100)
+  frecuencia      String?      @db.VarChar(100)
+  duracion       String?      @db.VarChar(100)
+  instrucciones   String?
+  creadoEn      DateTime     @default(now()) @map("creado_en") @db.Timestamptz(6)
+  receta   Receta @relation(fields: [recetaId], references: [id])
+
+  @@map("items_receta")
+}
+
+model InformeMedico {
+  id              String        @id @default(uuid()) @db.Uuid
+  eventoMedicoId  String?       @map("medical_event_id") @db.Uuid
+  historiaClinicaId String        @map("medical_record_id") @db.Uuid
+  pacienteId       String        @map("patient_id") @db.Uuid
+  medicoId        String?       @map("doctor_id") @db.Uuid
+  hospitalId      String        @map("hospital_id") @db.Uuid
+  titulo           String        @db.VarChar(200)
+  descripcion     String?
+  archivoId          String?       @map("archivo_id") @db.Uuid
+  creadoEn       DateTime      @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn       DateTime      @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  archivo            ArchivoMedico?  @relation(fields: [archivoId], references: [id])
+  medico          Medico?       @relation(fields: [medicoId], references: [id])
+  hospital        Hospital      @relation(fields: [hospitalId], references: [id])
+  eventoMedico    EventoMedico? @relation(fields: [eventoMedicoId], references: [id])
+  historiaClinica   HistoriaClinica @relation(fields: [historiaClinicaId], references: [id])
+  paciente         Paciente       @relation(fields: [pacienteId], references: [id])
+
+  @@map("informes_medicos")
+}
+
+model Notificacion {
+  id            String              @id @default(uuid()) @db.Uuid
+  usuarioId        String              @map("user_id") @db.Uuid
+  turnoId String?             @map("appointment_id") @db.Uuid
+  medicoId      String?             @map("doctor_id") @db.Uuid
+  hospitalId    String?             @map("hospital_id") @db.Uuid
+  canal       CanalNotificacion
+  estado        EstadoNotificacion  @default(pendiente)
+  titulo         String              @db.VarChar(200)
+  cuerpo          String?
+  enviadoEn        DateTime?           @map("enviado_en") @db.Timestamptz(6)
+  leidoEn        DateTime?           @map("leido_en") @db.Timestamptz(6)
+  creadoEn     DateTime            @default(now()) @map("creado_en") @db.Timestamptz(6)
+  turno   Turno?        @relation(fields: [turnoId], references: [id])
+  medico        Medico?             @relation(fields: [medicoId], references: [id])
+  hospital      Hospital?           @relation(fields: [hospitalId], references: [id])
+  usuario          Usuario                @relation(fields: [usuarioId], references: [id])
+
+  @@map("notificaciones")
+}
+
+model PreferenciaNotificacion {
+  id                          String   @id @default(uuid()) @db.Uuid
+  usuarioId                      String   @unique @map("user_id") @db.Uuid
+  correoHabilitado                Boolean  @default(true) @map("correo_habilitado")
+  pushHabilitado                 Boolean  @default(true) @map("push_habilitado")
+  recordatoriosTurnoHabilitados Boolean  @default(true) @map("recordatorios_turno_habilitados")
+  alertasRetrasoHabilitadas          Boolean  @default(true) @map("alertas_retraso_habilitadas")
+  alertasCancelacionHabilitadas    Boolean  @default(true) @map("alertas_cancelacion_habilitadas")
+  creadoEn                   DateTime @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn                   DateTime @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  usuario                        Usuario     @relation(fields: [usuarioId], references: [id])
+
+  @@map("preferencias_notificacion")
+}
+
+model DocumentoLegal {
+  id             String          @id @default(uuid()) @db.Uuid
+  tipoDocumento   String          @map("tipo_documento") @db.VarChar(80)
+  titulo          String          @db.VarChar(200)
+  contenido        String
+  version        String          @db.VarChar(20)
+  activo       Boolean         @default(true) @map("activo")
+  creadoEn      DateTime        @default(now()) @map("creado_en") @db.Timestamptz(6)
+  actualizadoEn      DateTime        @updatedAt @map("actualizado_en") @db.Timestamptz(6)
+  registrosConsentimiento RegistroConsentimiento[]
+
+  @@map("documentos_legales")
+}
+
+model RegistroConsentimiento {
+  id              String        @id @default(uuid()) @db.Uuid
+  usuarioId          String        @map("user_id") @db.Uuid
+  documentoLegalId String        @map("legal_document_id") @db.Uuid
+  tipoConsentimiento     TipoConsentimiento   @map("consent_type")
+  aceptadoEn      DateTime      @map("aceptado_en") @db.Timestamptz(6)
+  direccionIp       String?       @map("direccion_ip") @db.VarChar(45)
+  creadoEn       DateTime      @default(now()) @map("creado_en") @db.Timestamptz(6)
+  documentoLegal   DocumentoLegal @relation(fields: [documentoLegalId], references: [id])
+  usuario            Usuario          @relation(fields: [usuarioId], references: [id])
+
+  @@unique([usuarioId, documentoLegalId])
+  @@map("registros_consentimiento")
+}
+
+model InstantaneaEstadistica {
+  id           String    @id @default(uuid()) @db.Uuid
+  hospitalId   String?   @map("hospital_id") @db.Uuid
+  provinciaId   String?   @map("province_id") @db.Uuid
+  localidadId   String?   @map("locality_id") @db.Uuid
+  fechaInstantanea DateTime  @map("fecha_instantanea") @db.Date
+  datos         Json?
+  creadoEn    DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  hospital     Hospital? @relation(fields: [hospitalId], references: [id])
+
+  @@map("instantaneas_estadisticas")
+}
+
+model Reporte {
+  id              String    @id @default(uuid()) @db.Uuid
+  creadoPorUsuarioId String    @map("creado_por_usuario_id") @db.Uuid
+  hospitalId      String?   @map("hospital_id") @db.Uuid
+  tipoReporte      String    @map("tipo_reporte") @db.VarChar(80)
+  titulo           String    @db.VarChar(200)
+  descripcion     String?
+  urlArchivo         String?   @map("url_archivo")
+  creadoEn       DateTime  @default(now()) @map("creado_en") @db.Timestamptz(6)
+  creadoPor       Usuario      @relation(fields: [creadoPorUsuarioId], references: [id])
+  hospital        Hospital? @relation(fields: [hospitalId], references: [id])
+
+  @@map("reportes")
+}
+
+enum EstadoUsuario {
+  activo               @map("activo")
+  inactivo             @map("inactivo")
+  suspendido            @map("suspendido")
+  pendienteVerificacion @map("verificacion_pendiente")
+  eliminado              @map("eliminado")
+
+  @@map("user_status")
+}
+
+enum TipoHospital {
+  publico        @map("publico")
+  privado       @map("privado")
+  clinica        @map("clinica")
+  centroSalud @map("centro_salud")
+  laboratorio    @map("laboratorio")
+  otro         @map("otro")
+
+  @@map("hospital_type")
+}
+
+enum EstadoTurno {
+  disponible   @map("disponible")
+  reservado    @map("reservado")
+  confirmado   @map("confirmado")
+  enCurso @map("en_curso")
+  atendido    @map("atendido")
+  cancelado   @map("cancelado")
+  ausente      @map("ausente")
+  reprogramado @map("reprogramado")
+  bloqueado     @map("bloqueado")
+
+  @@map("appointment_status")
+}
+
+enum ModoTurno {
+  presencial @map("presencial")
+  virtual    @map("virtual")
+  seguimiento  @map("seguimiento")
+  emergencia  @map("emergencia")
+
+  @@map("appointment_mode")
+}
+
+enum EstadoLaboralMedico {
+  disponible   @map("disponible")
+  atendiendo   @map("atendiendo")
+  retrasado     @map("retrasado")
+  ausente      @map("ausente")
+  fueraServicio    @map("fuera_servicio")
+  noDisponible @map("no_disponible")
+
+  @@map("doctor_work_state")
+}
+
+enum EstadoVerificacion {
+  pendiente  @map("pendiente")
+  verificado @map("verificado")
+  rechazado @map("rechazado")
+  expirado  @map("expirado")
+
+  @@map("verification_status")
+}
+
+enum TipoArchivo {
+  receta      @map("receta")
+  analisis    @map("analisis")
+  radiografia @map("radiografia")
+  tomografia  @map("tomografia")
+  resonancia   @map("resonancia")
+  certificado @map("certificado")
+  informe      @map("informe")
+  imagen       @map("imagen")
+  pdf         @map("pdf")
+  otro       @map("otro")
+
+  @@map("file_type")
+}
+
+enum CanalNotificacion {
+  correo @map("correo")
+  push  @map("push")
+
+  @@map("notification_channel")
+}
+
+enum EstadoNotificacion {
+  pendiente   @map("pendiente")
+  enviado      @map("enviado")
+  entregado @map("entregado")
+  leido      @map("leido")
+  fallido    @map("fallido")
+
+  @@map("notification_status")
+}
+
+enum TipoConsentimiento {
+  terminos                 @map("terminos")
+  privacidad               @map("privacidad")
+  autorizacionMedica @map("autorizacion_medica")
+  compartirDatos          @map("compartir_datos")
+  avisoLegal          @map("aviso_legal")
+
+  @@map("consent_type")
+}
+
+enum TipoOrigen {
+  paciente @map("paciente")
+  medico  @map("medico")
+  personal   @map("personal")
+  sistema  @map("sistema")
+
+  @@map("source_type")
+}
