@@ -12,38 +12,38 @@ const adapter = new PrismaPg({ connectionString: dbUrl });
 const prisma = new PrismaClient({ adapter });
 
 const ROLES = [
-  { codigo: "patient", nombre: "Paciente" },
-  { codigo: "guardian", nombre: "Tutor" },
-  { codigo: "support_staff", nombre: "Personal de Apoyo" },
-  { codigo: "health_staff", nombre: "Personal de Salud" },
-  { codigo: "doctor", nombre: "Médico" },
-  { codigo: "area_manager", nombre: "Jefe de Área" },
-  { codigo: "medical_director", nombre: "Director Médico" },
-  { codigo: "hospital_director", nombre: "Director Hospitalario" },
-  { codigo: "ministry", nombre: "Ministerio de Salud" },
+  { codigo: "paciente", nombre: "Paciente" },
+  { codigo: "tutor", nombre: "Tutor" },
+  { codigo: "personal_apoyo", nombre: "Personal de Apoyo" },
+  { codigo: "personal_salud", nombre: "Personal de Salud" },
+  { codigo: "medico", nombre: "Médico" },
+  { codigo: "jefe_area", nombre: "Jefe de Área" },
+  { codigo: "director_medico", nombre: "Director Médico" },
+  { codigo: "director_hospital", nombre: "Director Hospitalario" },
+  { codigo: "ministerio", nombre: "Ministerio de Salud" },
   { codigo: "superadmin", nombre: "Superadministrador" },
 ];
 
 const PERMISOS = [
-  { codigo: "users:view", recurso: "users", accion: "view", nombre: "Ver usuarios" },
-  { codigo: "users:create", recurso: "users", accion: "create", nombre: "Crear usuarios" },
-  { codigo: "users:edit", recurso: "users", accion: "edit", nombre: "Editar usuarios" },
-  { codigo: "users:delete", recurso: "users", accion: "delete", nombre: "Eliminar usuarios" },
-  { codigo: "roles:view", recurso: "roles", accion: "view", nombre: "Ver roles" },
-  { codigo: "roles:assign", recurso: "roles", accion: "assign", nombre: "Asignar roles" },
-  { codigo: "patients:view", recurso: "patients", accion: "view", nombre: "Ver pacientes" },
-  { codigo: "patients:create", recurso: "patients", accion: "create", nombre: "Crear pacientes" },
-  { codigo: "patients:edit", recurso: "patients", accion: "edit", nombre: "Editar pacientes" },
-  { codigo: "appointments:view", recurso: "appointments", accion: "view", nombre: "Ver turnos" },
-  { codigo: "appointments:create", recurso: "appointments", accion: "create", nombre: "Crear turnos" },
-  { codigo: "appointments:cancel", recurso: "appointments", accion: "cancel", nombre: "Cancelar turnos" },
-  { codigo: "appointments:reschedule", recurso: "appointments", accion: "reschedule", nombre: "Reprogramar turnos" },
-  { codigo: "medical_records:view", recurso: "medical_records", accion: "view", nombre: "Ver HC" },
-  { codigo: "medical_records:create", recurso: "medical_records", accion: "create", nombre: "Crear HC" },
-  { codigo: "hospitals:view", recurso: "hospitals", accion: "view", nombre: "Ver hospitales" },
-  { codigo: "hospitals:manage", recurso: "hospitals", accion: "manage", nombre: "Gestionar hospitales" },
-  { codigo: "statistics:view", recurso: "statistics", accion: "view", nombre: "Ver estadísticas" },
-  { codigo: "audit_logs:view", recurso: "audit_logs", accion: "view", nombre: "Ver auditoría" },
+  { codigo: "usuarios:ver", recurso: "usuarios", accion: "ver", nombre: "Ver usuarios" },
+  { codigo: "usuarios:crear", recurso: "usuarios", accion: "crear", nombre: "Crear usuarios" },
+  { codigo: "usuarios:editar", recurso: "usuarios", accion: "editar", nombre: "Editar usuarios" },
+  { codigo: "usuarios:eliminar", recurso: "usuarios", accion: "eliminar", nombre: "Eliminar usuarios" },
+  { codigo: "roles:ver", recurso: "roles", accion: "ver", nombre: "Ver roles" },
+  { codigo: "roles:asignar", recurso: "roles", accion: "asignar", nombre: "Asignar roles" },
+  { codigo: "pacientes:ver", recurso: "pacientes", accion: "ver", nombre: "Ver pacientes" },
+  { codigo: "pacientes:crear", recurso: "pacientes", accion: "crear", nombre: "Crear pacientes" },
+  { codigo: "pacientes:editar", recurso: "pacientes", accion: "editar", nombre: "Editar pacientes" },
+  { codigo: "turnos:ver", recurso: "turnos", accion: "ver", nombre: "Ver turnos" },
+  { codigo: "turnos:crear", recurso: "turnos", accion: "crear", nombre: "Crear turnos" },
+  { codigo: "turnos:cancelar", recurso: "turnos", accion: "cancelar", nombre: "Cancelar turnos" },
+  { codigo: "turnos:reprogramar", recurso: "turnos", accion: "reprogramar", nombre: "Reprogramar turnos" },
+  { codigo: "historias_clinicas:ver", recurso: "historias_clinicas", accion: "ver", nombre: "Ver HC" },
+  { codigo: "historias_clinicas:crear", recurso: "historias_clinicas", accion: "crear", nombre: "Crear HC" },
+  { codigo: "hospitales:ver", recurso: "hospitales", accion: "ver", nombre: "Ver hospitales" },
+  { codigo: "hospitales:gestionar", recurso: "hospitales", accion: "gestionar", nombre: "Gestionar hospitales" },
+  { codigo: "estadisticas:ver", recurso: "estadisticas", accion: "ver", nombre: "Ver estadísticas" },
+  { codigo: "auditoria:ver", recurso: "auditoria", accion: "ver", nombre: "Ver auditoría" },
 ];
 
 async function main() {
@@ -72,46 +72,46 @@ async function main() {
   console.log("Asignando permisos a roles...");
   const rolesPermisos: Record<string, string[]> = {
     superadmin: PERMISOS.map((p) => p.codigo),
-    patient: ["patients:view", "appointments:view", "appointments:create", "appointments:cancel"],
-    guardian: ["patients:view", "appointments:view", "appointments:create", "appointments:cancel"],
-    support_staff: [
-      "patients:view", "patients:create", "patients:edit",
-      "appointments:view", "appointments:create", "appointments:cancel", "appointments:reschedule",
+    paciente: ["pacientes:ver", "turnos:ver", "turnos:crear", "turnos:cancelar"],
+    tutor: ["pacientes:ver", "turnos:ver", "turnos:crear", "turnos:cancelar"],
+    personal_apoyo: [
+      "pacientes:ver", "pacientes:crear", "pacientes:editar",
+      "turnos:ver", "turnos:crear", "turnos:cancelar", "turnos:reprogramar",
     ],
-    health_staff: [
-      "patients:view",
-      "appointments:view",
-      "medical_records:view",
+    personal_salud: [
+      "pacientes:ver",
+      "turnos:ver",
+      "historias_clinicas:ver",
     ],
-    doctor: [
-      "patients:view",
-      "appointments:view", "appointments:create", "appointments:cancel", "appointments:reschedule",
-      "medical_records:view", "medical_records:create",
+    medico: [
+      "pacientes:ver",
+      "turnos:ver", "turnos:crear", "turnos:cancelar", "turnos:reprogramar",
+      "historias_clinicas:ver", "historias_clinicas:crear",
     ],
-    area_manager: [
-      "patients:view",
-      "appointments:view",
-      "medical_records:view",
-      "statistics:view",
+    jefe_area: [
+      "pacientes:ver",
+      "turnos:ver",
+      "historias_clinicas:ver",
+      "estadisticas:ver",
     ],
-    medical_director: [
-      "patients:view",
-      "appointments:view",
-      "medical_records:view",
-      "statistics:view",
-      "audit_logs:view",
+    director_medico: [
+      "pacientes:ver",
+      "turnos:ver",
+      "historias_clinicas:ver",
+      "estadisticas:ver",
+      "auditoria:ver",
     ],
-    hospital_director: [
-      "patients:view",
-      "appointments:view",
-      "medical_records:view",
-      "statistics:view",
-      "audit_logs:view",
-      "hospitals:view",
+    director_hospital: [
+      "pacientes:ver",
+      "turnos:ver",
+      "historias_clinicas:ver",
+      "estadisticas:ver",
+      "auditoria:ver",
+      "hospitales:ver",
     ],
-    ministry: [
-      "statistics:view",
-      "hospitals:view",
+    ministerio: [
+      "estadisticas:ver",
+      "hospitales:ver",
     ],
   };
 

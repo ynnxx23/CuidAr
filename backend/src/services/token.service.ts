@@ -12,7 +12,7 @@ export class ServicioToken {
       expiresIn: env.JWT_EXPIRES_IN as jwt.SignOptions["expiresIn"],
     });
   }
-
+   
   generarTokenActualizacion(payload: TokenPayload): string {
     return jwt.sign(payload, env.JWT_REFRESH_SECRET, {
       expiresIn: env.JWT_REFRESH_EXPIRES_IN as jwt.SignOptions["expiresIn"],
