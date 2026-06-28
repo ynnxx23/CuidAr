@@ -4,6 +4,7 @@ import path from "path";
 dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 interface Env {
+  TZ: string;
   NODE_ENV: string;
   PORT: number;
   DB_HOST: string;
@@ -22,6 +23,7 @@ interface Env {
 
 function loadEnv(): Env {
   const env: Env = {
+    TZ: process.env.TZ || "America/Argentina/Buenos_Aires",
     NODE_ENV: process.env.NODE_ENV || "development",
     PORT: parseInt(process.env.PORT || "3000", 10),
     DB_HOST: process.env.DB_HOST || "localhost",
