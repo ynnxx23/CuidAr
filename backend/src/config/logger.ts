@@ -3,9 +3,5 @@ import { env } from "./env";
 
 export const logger = pino({
   level: env.LOG_LEVEL,
-  transport:
-    env.NODE_ENV !== "production"
-      ? { target: "pino/file", options: { destination: 1 } }
-      : undefined,
   redact: ["password", "password_hash", "token", "authorization"],
 });

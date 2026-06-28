@@ -1,9 +1,14 @@
+import dotenv from "dotenv";
+import path from "path";
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
+
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 
-const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL!,
-});
+const dbUrl = process.env.DATABASE_URL;
+if (!dbUrl) throw new Error("DATABASE_URL no definida");
+
+const adapter = new PrismaPg({ connectionString: dbUrl });
 const prisma = new PrismaClient({ adapter });
 
 const ROLES = [
